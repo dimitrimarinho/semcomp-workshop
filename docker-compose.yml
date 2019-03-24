@@ -1,0 +1,56 @@
+version: '3.2'
+services:
+  mysql:
+    image: mysql:5.7
+    ports:
+      - target: 3306
+        published: 3307
+        protocol: tcp
+        mode: ingress
+    environment:
+      - MYSQL_ROOT_PASSWORD=docker
+      - MYSQL_DATABASE=nodeauth
+      - TZ=America/Bahia
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - default
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 2
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+        delay: 30s
+        max_attempts: 5
+        window: 120s
+  application:
+    build: .
+    image: semcomp/api
+    ports:
+      - "7000:7000"
+    networks:
+      - default
+    env_file:
+      - ./.env
+    command: "yarn start"
+    depends_on:
+      - mysql
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+        delay: 30s
+        max_attempts: 5
+        window: 120s
+
+networks:
+  default:
+    driver: overlay
+volumes:
+  mysql_data:
+    driver: local
